@@ -92,7 +92,6 @@ private:
 	int fd_; //Serial Port file descriptor
 	int error_count_;
 
-
 public:
 	//Public Variable Declaration
 
@@ -257,7 +256,6 @@ int serialConnectA255::openPort()
 	return 0;
 }
 
-
 //Close the Serial Port
 int serialConnectA255::closePort()
 {
@@ -354,7 +352,6 @@ int serialConnectA255::initialize()
 		ROS_ERROR("Caught an unknown exception.");
 		return -1;
 	}
-
 }
 
 int serialConnectA255::getArmPositionRW()
@@ -442,9 +439,6 @@ int serialConnectA255::getArmPositionRW()
 	return 0;
 }
 
-
-
-
 string setPrecision(double input, int prec)
 {
 	stringstream buff;
@@ -453,9 +447,6 @@ string setPrecision(double input, int prec)
 	buff >> temp;
 	return temp;
 }
-
-
-
 
 // Function to get the joint angles (in motor counts) and convert to angle values in CRS convention:
 int serialConnectA255::getAngles()
@@ -548,10 +539,6 @@ int serialConnectA255::getAngles()
 	return 0;
 }
 
-
-
-
-
 //Forward Kinematics
 /*
 double* serialConnectA255::forwKine(double desTh_1, double desTh_2, double desTh_3, double desTh_4, double desTh_5)
@@ -585,21 +572,7 @@ return forwK;
 }
 */
 
-
-
-
-
-
-
-
-
-
-
-
-
 //Inverse Kinematics
-//
-
 //desX, desY, desZ are in millimeters, alpha in degrees
 double* serialConnectA255::invKine(double desX, double desY, double desZ, double alpha)
 {
@@ -650,13 +623,6 @@ double* serialConnectA255::invKine(double desX, double desY, double desZ, double
 	
 	return invK;
 }
-//
-
-
-
-
-
-
 
 //moveTheta function
 int serialConnectA255::moveTheta(double desSpeed, double finalTheta_1, double finalTheta_2, double finalTheta_3, double finalTheta_4, double finalTheta_5)
@@ -749,8 +715,6 @@ int serialConnectA255::moveTheta(double desSpeed, double finalTheta_1, double fi
 	// Get Current Arm Position
 	getAngles();
 }
-
-
 
 int serialConnectA255::moveRobot(double x, double y, double z, double z_rot, double y_rot, double x_rot)
 {
@@ -876,8 +840,6 @@ int serialConnectA255::readString(string &str)
 	return 0;
 }
 
-
-
 // Function to go to Ready position which is (0,90,0,0,0) in CRS convention
 int serialConnectA255::goReady()
 {
@@ -892,7 +854,6 @@ int serialConnectA255::goReady()
 	sleepms(10000);
 	return 0;
 }
-
 
 // Function for moving the tool through straight line in the z-direction
 int serialConnectA255::goInZ(double desZ)
@@ -915,7 +876,6 @@ int serialConnectA255::goInZ(double desZ)
 	tempZZ = "";
 	return 0;
 }
-
 
 // Functions for opening and closing the gripper
 int serialConnectA255::grip_open()
@@ -941,6 +901,7 @@ int serialConnectA255::grip_close()
 	}
 	sleepms(2000);
 }
+
 
 
 //MAIN LOOP
@@ -985,37 +946,6 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-/*
-	if (armController.moveTheta(15, 0, 30, -80, 0, 90) < 0)
-	{
-		ROS_ERROR("Unable to Run moveTheta");
-		return -1;
-	}
-
-
-	if (armController.moveRobot(260, 70, 400, 0, 0, 0) < 0)
-	{
-		ROS_ERROR("Unable to Move Robot");
-		return -1;
-	}
-
-	if (armController.moveRobot(305, 0, 508, 0, 0, 0) < 0)
-	{
-		ROS_ERROR("Unable to Move Robot");
-		return -1;
-	}
-*/
-/*
-	DesXYZ = armController.forwKine(0,30,-80,170,90);
-	if(armController.moveRobot(DesXYZ[0], DesXYZ[1], DesXYZ[2], 0, 0, 90) < 0)
-	{
-		ROS_ERROR("Unable to Move Robot");
-		return -1;
-	}
-*/
-
-
-//
 	DesTheta = armController.invKine(290,-270,300,45);
 	if(armController.moveTheta(20, DesTheta[0], DesTheta[1], DesTheta[2], DesTheta[3], DesTheta[4]) < 0)
 	{
@@ -1074,7 +1004,6 @@ int main(int argc, char **argv)
 
 	while (ros::ok())
 	{
-
 
 		ros::spinOnce();
 		loop_rate.sleep();			//used for maintaining rate
