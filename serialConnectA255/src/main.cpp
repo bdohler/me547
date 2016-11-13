@@ -46,13 +46,23 @@ This program contains the source code for controlling the CRS A255 arm
 #include <stdint.h>
 #include <math.h>
 
+// includes for computer vision
+// #include <Windows.h>
+#include <opencv-3.1.0/opencv2/opencv.hpp>
+// #include "opencv2\highgui.hpp"
+// #include "opencv2\imgproc.hpp"
+// #include "opencv2/imgcodecs/imgcodecs.hpp"
+// #include "opencv2/videoio/videoio.hpp"
+
 
 #define BUFFER_SIZE 1024
 #define MISSING_VALUE -1024
 
-
+//added namespace for computer vision
+using namespace cv;
 using namespace std;
 using namespace boost;
+
 
 class serialConnectA255
 {
@@ -902,6 +912,184 @@ int serialConnectA255::grip_close()
 	sleepms(2000);
 }
 
+void open_and_initialize_arm_controller(serialConnectA255 armController)
+{
+	if (armController.openPort() < 0)
+	{
+		ROS_INFO("Something went wrong in opening the serial port. Please see the messages above.");
+		return -1;
+	}
+	else
+	{
+		ROS_INFO("Port open successful");
+	}
+
+
+	if (armController.initialize() < 0)
+	{
+		ROS_ERROR("Initialization Failed");
+		return -1;
+	}
+}
+
+void close_arm_controller(serialConnectA255 armController)
+{
+	if (armController.closePort() < 0)
+	{
+		ROS_INFO("Something went wrong in closing the serial port. Please see the messages above.");
+		return -1;
+	}
+	else
+	{
+		ROS_INFO("Port close successful");
+	}
+}
+
+cv::Mat fetch_image()
+{
+	//Right now this function simply takes the stock image from the directory
+	//It can be updated time permitting later to take in an image from the workspace
+	return imread("1.jpg", 0);
+}
+
+cv::Mat create_vectorized_image(cv::Mat image_to_be_vectorized)
+{
+	cv::Mat edges;
+	cv::Canny(image_to_be_vectorized, edges, 95, 100);
+	
+	cv::Mat dx, dy;
+	// sobel derivative approximation X direction of edges image
+	cv::Sobel(edges, dx, CV_32F, 1, 0);
+	// sobel derivative approximation Y direction of edges image
+	cv::Sobel(edges, dy, CV_32F, 0, 1);
+
+	vector<Vec4i> lines;
+	// Find hough lines 
+	HoughLinesP(edges, lines, 1, CV_PI / 180, 100, 100, 10);
+
+	// Prepare blank mat with same sizes as image
+	Mat Blank(image_to_be_vectorized.rows, image_to_be_vectorized.cols, CV_8UC3, Scalar(0, 0, 0));
+
+	vector<Vec4i> lines;
+	// Find hough lines 
+	HoughLinesP(edges, lines, 1, CV_PI / 180, 100, 100, 10);
+
+	// Prepare blank mat with same sizes as image
+	Mat Blank(image_to_be_vectorized.rows, image_to_be_vectorized.cols, CV_8UC3, Scalar(0, 0, 0));
+
+   	// Draw lines into image and Blank images
+	for (size_t i = 0; i < lines.size(); i++)
+	{
+		Vec4i l = lines[i];
+
+		line(image_to_be_vectorized, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0, 0, 0), 2, CV_AA);
+
+		line(Blank, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(255, 255, 255), 2, CV_AA);
+
+	}
+
+	return Blank;
+}
+
+cv::vector<Vec4i> generate_vector_of_lines(cv::Mat image_to_be_vectorized)
+{
+	cv::Mat edges;
+	cv::Canny(image_to_be_vectorized, edges, 95, 100);
+	
+	cv::Mat dx, dy;
+	// sobel derivative approximation X direction of edges image
+	cv::Sobel(edges, dx, CV_32F, 1, 0);
+	// sobel derivative approximation Y direction of edges image
+	cv::Sobel(edges, dy, CV_32F, 0, 1);
+
+	vector<Vec4i> lines;
+	// Find hough lines 
+	HoughLinesP(edges, lines, 1, CV_PI / 180, 100, 100, 10);
+
+	// Prepare blank mat with same sizes as image
+	Mat Blank(image_to_be_vectorized.rows, image_to_be_vectorized.cols, CV_8UC3, Scalar(0, 0, 0));
+
+	vector<Vec4i> lines;
+	// Find hough lines 
+	HoughLinesP(edges, lines, 1, CV_PI / 180, 100, 100, 10);
+
+	return lines;
+}
+
+void display_image_to_screen(cv::Mat image_to_be_displayed)
+{
+	imshow("Edges", image_to_be_displayed);
+
+	waitKey(10000);
+}
+
+void save_image(cv::Mat image_to_be_saved, std::string file_name)
+{
+	file_name = file_name+".jpg"
+	imwrite(file_name, image_to_be_saved);
+}
+
+cv::vector<Vec6f> vectors_2d_to_3d(cv::vector<Vec4i> 2d_vector, double scale, double offsetX, double offsetY. double heightZ)
+{
+	//Convert the 2d vector of pixel points to a 3d vector XYZ co-ordinates for the robot to move to and from
+	//This is where typecast occurs as well to move from pixel integers to double co-ordinates
+	//Typecasting is preformed by multiplying the ints by the double "scale"
+	std::vector<Vec6f> 3d_vector;
+	for(size_t i = 0; i < v.size(); i++)
+	{
+		cv::Vec4i line = 2d_vector[i];
+		startX = line[0]*scale+offsetX;
+		startY = line[1]*scale+offsetY;
+		startZ = heightZ;
+		endX = line[2]*scale+offsetX;
+		endY = line[3]*scale+offsetY;
+		endZ = heightZ;
+		cv::Vec6f newVector(startX, startY, startZ, endX, endY, endZ);
+		3d_vector.push_back(newVector);
+	}
+
+	return 3d_vector;
+}
+
+void draw_image_on_paper(cv::vector<Vec6f> v, serialConnectA255 armController, double hover_dist)
+{
+	double DesTh1 = 0.0;
+	double DesTh2 = 0.0;
+	double DesTh3 = 0.0;
+	double DesTh4 = 0.0;
+	double DesTh5 = 0.0;
+	double *DesTheta = new double[5];
+
+	for (size_t i = 0; i < v.size(); i++)
+	{
+		Vec6f line = v[i];
+
+		//Move above the first point in the line
+		DesTheta = armController.invKine(line[0],line[1],line[2]+hover_dist,0);
+		if(armController.moveTheta(20, DesTheta[0], DesTheta[1], DesTheta[2], DesTheta[3], DesTheta[4]) < 0)
+		{
+			ROS_ERROR("Unable to Run moveTheta");
+			return -1;
+		}
+
+		//Put the pen to the paper
+		armController.goInZ(-hover_dist);
+
+		//Move along the paper to the second point in the line
+		DesTheta = armController.invKine(line[3],line[4],line[5],0);
+		if(armController.moveTheta(20, DesTheta[0], DesTheta[1], DesTheta[2], DesTheta[3], DesTheta[4]) < 0)
+		{
+			ROS_ERROR("Unable to Run moveTheta");
+			return -1;
+		}
+
+		//Life the pen from the paper
+		armController.goInZ(hover_dist);
+	}
+
+	//Return home
+	armController.goReady();
+}
 
 
 //MAIN LOOP
@@ -921,6 +1109,17 @@ int main(int argc, char **argv)
 	double DesTh5 = 0.0;
 	double *DesTheta = new double[5];
 
+	double hover_dist = 20.0; //should be in mm
+	double image_scale_2d_to_3d = 40.0/800.0; //pixels to mm, lets say 800 pixels = 40mm, then scale = 
+	double image_offsetX_2d_to_3d; //TBD
+	double image_offsetY_2d_to_3d; //TBD
+	double image_heightZ = 0.0; //Should be equal to the height of the piece of paper
+
+	//Declare image to be drawn
+	cv::Mat image;
+	cv::Mat vectorized_image;
+	cv::vector<Vec4i> lines;
+	cv::vector<Vec6i> 3d_lines;
 
 	//Initialize ROS
 	ros::init(argc, argv, "serialConnectA255");
@@ -929,76 +1128,22 @@ int main(int argc, char **argv)
 	//Create an object of class serialConnectA255
 	serialConnectA255 armController;
 
-	if (armController.openPort() < 0)
-	{
-		ROS_INFO("Something went wrong in opening the serial port. Please see the messages above.");
-		return -1;
-	}
-	else
-	{
-		ROS_INFO("Port open successful");
-	}
+	open_and_initialize_arm_controller(armController);
 
+	image = fetch_image();
 
-	if (armController.initialize() < 0)
-	{
-		ROS_ERROR("Initialization Failed");
-		return -1;
-	}
+	vectorized_image = create_vectorized_image(image);
+	display_image_to_screen(vectorized_image);
 
-	DesTheta = armController.invKine(290,-270,300,45);
-	if(armController.moveTheta(20, DesTheta[0], DesTheta[1], DesTheta[2], DesTheta[3], DesTheta[4]) < 0)
-	{
-		ROS_ERROR("Unable to Run moveTheta");
-		return -1;
-	}
+	lines = generate_vector_of_lines(image);
+	3d_lines = vectors_2d_to_3d(lines, image_scale_2d_to_3d, image_offsetX_2d_to_3d, image_offsetY_2d_to_3d, image_heightZ);
 
-	if(armController.grip_open() < 0)
-	{
-		ROS_ERROR("Unable to Open Grip");
-		return -1;
-	}
-
-	armController.goInZ(-70);
-
-	if(armController.grip_close() < 0)
-	{
-		ROS_ERROR("Unable to Close Grip");
-		return -1;
-	}
-
-	armController.goInZ(70);
-
-	DesTheta = armController.invKine(290,270,300,-45);
-	if(armController.moveTheta(20, DesTheta[0], DesTheta[1], DesTheta[2], DesTheta[3], DesTheta[4]) < 0)
-	{
-		ROS_ERROR("Unable to Run moveTheta");
-		return -1;
-	}
-
-	armController.goInZ(-70);
-
-	if(armController.grip_open() < 0)
-	{
-		ROS_ERROR("Unable to Close Grip");
-		return -1;
-	}
-
-	armController.goInZ(70);
-
+	draw_image_on_paper(3d_lines, armController, hover_dist);
 
 	//Go to ready position before close
 	armController.goReady();
 
-	if (armController.closePort() < 0)
-	{
-		ROS_INFO("Something went wrong in closing the serial port. Please see the messages above.");
-		return -1;
-	}
-	else
-	{
-		ROS_INFO("Port close successful");
-	}
+	close_arm_controller(armController);
 
 	ros::Rate loop_rate(100); //50Hz		
 
