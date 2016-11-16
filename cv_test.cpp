@@ -10,12 +10,12 @@
 using namespace cv;
 using namespace std;
 
-cv::Mat fetch_image()
+cv::Mat fetch_image(std::string file_name)
 {
 	//Right now this function simply takes the stock image from the directory
 	//It can be updated time permitting later to take in an image from the workspace
 	cv::Mat image;
-	image = imread("8.png", 1);
+	image = imread(file_name, 1);
 
 	if(!image.data)
 	{
@@ -150,19 +150,16 @@ std::vector<Mat> seperate_channels(cv::Mat src)
 	Mat result_red(src.rows, src.cols, CV_8UC3); // notice the 3 channels here!
 
 	// Create blue channel
-	printf("Creating seperate blue channel\n");
 	Mat in1[] = { spl[0], empty_image, empty_image };
 	int from_to1[] = { 0,0, 1,1, 2,2 };
 	mixChannels( in1, 3, &result_blue, 1, from_to1, 3 );
 
 	// Create green channel
-	printf("Creating seperate green channel\n");
 	Mat in2[] = { empty_image, spl[1], empty_image };
 	int from_to2[] = { 0,0, 1,1, 2,2 };
 	mixChannels( in2, 3, &result_green, 1, from_to2, 3 );
 
 	// Create red channel
-	printf("creating seperate red channel\n");
 	Mat in3[] = { empty_image, empty_image, spl[2]};
 	int from_to3[] = { 0,0, 1,1, 2,2 };
 	mixChannels( in3, 3, &result_red, 1, from_to3, 3 );
@@ -180,79 +177,186 @@ cv::Mat blur_image(cv::Mat 	image_to_be_blurred, int strength)
     return dst;
 }
 
+cv::Mat draw_circles(cv::Mat image_to_have_circles_draw, std::vector<Vec3f> circles)
+{
+	cv::Mat result;
+	result = image_to_have_circles_draw;
+	for(size_t i = 0; i < circles.size(); i++) 
+	{
+		Point centre(cvRound(circles[i][0]), cvRound(circles[i][1]));
+		int radius = cvRound(circles[i][2]);
+
+		//Draw small circle at centre
+		circle(result, centre, 3, 255, -1, 8, 0);
+
+		//Draw circle of correct radius
+		circle(result, centre, radius, 255, 3, 8 ,0);
+	}
+	return result;
+}
+
+void list_circle_xyr(std::vector<Vec3f> v)
+{
+	for(size_t i = 0; i < v.size(); i++)
+	{
+		cout << "X: " << v[i][0] << " Y: " << v[i][1] << " R: " << v[i][2] << endl;
+	}
+	return;
+}
+
+cv::Mat maximize_contrast(cv::Mat image, int threshold) 
+{
+	cv::Mat new_image = Mat::zeros(image.size(), image.type());
+	for(size_t y = 0; y < image.cols; y++)
+	{
+		for(size_t x = 0; x < image.rows; x++)
+		{
+			for( size_t c = 0; c < 3; c++) 
+			{
+				if(image.at<Vec3b>(x,y)[c] < threshold) 
+				{
+					new_image.at<Vec3b>(x,y)[c] = 0;
+				}
+				else
+				{
+					new_image.at<Vec3b>(x,y)[c] = 255;
+				}
+
+			}
+
+		}
+	}	
+	return new_image;
+}
+
+
+std::vector<Vec3f> filter_circles(std::vector<Vec3f> v) 
+{
+	std::vector<Vec3f> result;
+
+	for(size_t i = 0; i < v.size(); i++)
+	{
+		float x = v[i][0];
+		float y = v[i][1];
+		float r = v[i][2];
+		//result.push_back(v[i]);
+		if(y < 200.0 && x < 400.0)
+		{
+			result.push_back(v[i]);
+			cout << v[i] << endl;
+		}
+	}
+
+	return result;
+}
+
 int main(int argc, const char** argv)
 {
 	printf("Hello World\n");
 
-	//System.out.println(Core.getBuildInformation());
-	Mat image;
-	Mat vector_image;
-	Mat blurred_image;
-	std::vector<Mat> bgr;
-	Mat blue;
-	Mat green;
-	Mat red;	
-	Mat final_result;
-	image = fetch_image();
-	int blur_strength = 9;
+	// //System.out.println(Core.getBuildInformation());
+	// Mat image;
+	// Mat vector_image;
+	// Mat blurred_image;
+	// std::vector<Mat> bgr;
+	// Mat blue;
+	// Mat green;
+	// Mat red;	
+	// Mat final_result;
+	// int blur_strength = 9;
+	// std::string image_to_draw_file_name = "6.jpg";
+	std::string workplace_image_test = "colour_test.png";
 
-	display_image_to_screen(image);
-	blurred_image = blur_image(image, blur_strength);
-	display_image_to_screen(blurred_image);
 
-	printf("Starting channel seperation\n");
-	bgr = seperate_channels(blurred_image);
-	printf("Splitting of image complete\n");
 
-	blue = create_vectorized_image(bgr[0], "BLUE");
-	printf("Blue image vectorized\n");
-	green = create_vectorized_image(bgr[1], "GREEN");
-	printf("Green image vectorized\n");
-	red = create_vectorized_image(bgr[2], "RED");
-	printf("Red image vectorized\n");
-	printf("Creation of vectorized BGR complete\n");
-	final_result = red + blue + green;
-	final_result = Scalar(255, 255, 255) - final_result;
-	display_image_to_screen(final_result);
-	display_image_to_screen(red);
+	// image = fetch_image(image_to_draw_file_name);
+	// display_image_to_screen(image);
+	// blurred_image = blur_image(image, blur_strength);
+	// display_image_to_screen(blurred_image);
 
-	// cv::Mat edges;
+	// bgr = seperate_channels(blurred_image);
 
- // 	// Canny edge 
-	// cv::Canny(image, edges, 95, 100);
+	// blue = create_vectorized_image(bgr[0], "BLUE");
+	// green = create_vectorized_image(bgr[1], "GREEN");
+	// red = create_vectorized_image(bgr[2], "RED");
+	// final_result = red + blue + green;
+	// final_result = Scalar(255, 255, 255) - final_result;
+	// display_image_to_screen(final_result);
+	// display_image_to_screen(red);
 
-	// cv::Mat dx, dy;
+	// //Workspace image to find marker in
+	// //Currently a test image. 
 
-	// // sobel derivative approximation X direction of edges image
-	// cv::Sobel(edges, dx, CV_32F, 1, 0);
+	cout << "Starting second component" << endl;
+	cv::Mat image2;
+	std::vector<Mat> bgr2;
+	cv::Mat blue2;
+	cv::Mat green2;
+	cv::Mat red2;
+	image2 = fetch_image(workplace_image_test);
+	display_image_to_screen(image2);
+	image2 = maximize_contrast(image2, 50);
+	display_image_to_screen(image2);
+	bgr2 = seperate_channels(image2);
 
-	// // sobel derivative approximation Y direction of edges image
-	// cv::Sobel(edges, dy, CV_32F, 0, 1);
+	cout << "Starting grayscale conversion" << endl;
+	//Convert all three channels to gray, and blur to avoid false detection
+	cvtColor(bgr2[0], blue2, CV_BGR2GRAY);
+	cvtColor(bgr2[1], green2, CV_BGR2GRAY);
+	cvtColor(bgr2[2], red2, CV_BGR2GRAY);
+	GaussianBlur(blue2, blue2, Size(31,31), 2, 2);
+	GaussianBlur(green2, green2, Size(31,31), 2, 2);	
+	GaussianBlur(red2, red2, Size(31,31), 2, 2);
+	display_image_to_screen(blue2);
+	display_image_to_screen(green2);
+	display_image_to_screen(red2);
 
-	// vector<Vec4i> lines;
-	// // Find hough lines 
-	// HoughLinesP(edges, lines, 1, CV_PI / 180, 100, 100, 10);
+	//Store the circles in a vector of three floats for each channel
+	cout << "Running HoughCircles" << endl;
+	std::vector<Vec3f> blue_circles;
+	std::vector<Vec3f> green_circles;
+	std::vector<Vec3f> red_circles;
+	std::vector<Vec3f> blue_circles_filtered;
+	std::vector<Vec3f> green_circles_filtered;
+	std::vector<Vec3f> red_circles_filtered;
 
-	// // Prepare blank mat with same sizes as image
-	// Mat Blank(image.rows, image.cols, CV_8UC3, Scalar(0, 0, 0));
+	int minimum_dist_btwn_centres = 30;
+	int upper_internal_canny_threshold = 40;
+	int threshold_centre_detect = 1;
+	int max_radius = 20;
+	HoughCircles(blue2, blue_circles, CV_HOUGH_GRADIENT, 1, minimum_dist_btwn_centres, upper_internal_canny_threshold, threshold_centre_detect, 0, max_radius);
+	HoughCircles(green2, green_circles, CV_HOUGH_GRADIENT, 1, minimum_dist_btwn_centres, upper_internal_canny_threshold, threshold_centre_detect, 0, max_radius);
+	HoughCircles(red2, red_circles, CV_HOUGH_GRADIENT, 1, minimum_dist_btwn_centres, upper_internal_canny_threshold, threshold_centre_detect, 0, max_radius);
+	blue_circles_filtered = filter_circles(blue_circles);
+	green_circles_filtered = filter_circles(green_circles);
+	red_circles_filtered = filter_circles(red_circles);
+	cout << "Displaying results of HoughCircles" << endl;
+	// cout << blue_circles[0][0] << endl;
+	// cout << green_circles[0][0] << endl;
+	// cout << red_circles[0][0] << endl;
+	//Draw markers on the images of the circles
+	cv::Mat blue_with_circles;
+	cv::Mat green_with_circles;
+	cv::Mat red_with_circles;
 
- //   	// Draw lines into image and Blank images
-	// for (size_t i = 0; i < lines.size(); i++)
-	// {
-	// 	Vec4i l = lines[i];
+	cout << "Drawing circles" << endl;		
+	blue_with_circles = draw_circles(blue2, blue_circles_filtered);
+	green_with_circles = draw_circles(green2, green_circles_filtered);
+	red_with_circles =  draw_circles(red2, red_circles_filtered);
 
-	// 	line(image, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0, 0, 0), 2, CV_AA);
+	//Display the results
+	cout << "Displaying the final images" << endl;
+	display_image_to_screen(blue_with_circles);
+	display_image_to_screen(green_with_circles);
+	display_image_to_screen(red_with_circles);
 
-	// 	line(Blank, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(255, 255, 255), 2, CV_AA);
+	cout << "Blue Circles" << endl;
+	list_circle_xyr(blue_circles);
 
-	// }
-
-	// imwrite("houg.jpg", image);
-	// imshow("Edges", image);
-
-	// waitKey(10000);
-
-	// imwrite("houg2.jpg", Blank);
-	// imshow("Edges Structure", Blank);
-
+	cout << "complete" << endl;
 }
+
+
+// $875.00
+// 1-877-564-5227
+
