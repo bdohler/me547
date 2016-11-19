@@ -48,11 +48,14 @@ This program contains the source code for controlling the CRS A255 arm
 
 // includes for computer vision
 // #include <Windows.h>
-#include <opencv-3.1.0/opencv2/opencv.hpp>
-// #include "opencv2\highgui.hpp"
-// #include "opencv2\imgproc.hpp"
-// #include "opencv2/imgcodecs/imgcodecs.hpp"
-// #include "opencv2/videoio/videoio.hpp"
+//#include <opencv-3.1.0/opencv2/opencv.hpp>
+#include <opencv2/opencv.hpp>
+#include <opencv2/opencv_modules.hpp>
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include "opencv2/imgproc/imgproc.hpp"
+//#include "opencv2/imgcodecs/imgcodecs.hpp"
+#include "opencv2/video/video.hpp"
 
 
 #define BUFFER_SIZE 1024
@@ -94,6 +97,7 @@ private:
 
 
 	//Initialize ROS Subscriber
+	ros::
 
 
 	//Declare private variables
@@ -126,6 +130,11 @@ public:
 		n_private.param("baud_rate", baud_rate_, 57600); // Baud Rate
 
 
+		// Build CV subscriber
+		cv::namedWindow("overhead_view");
+		cv::startWindowThread();
+		image_transport::ImageTransport it(nh);
+		image_transport::Subscriber sub = it.subscribe("camera", 1, imageCallback);
 	}
 
 	//De-constructor for the Class.
@@ -173,7 +182,22 @@ public:
 
 	//void cmdVelCallback(const geometry_msgs::Twist::ConstPtr& cmdVelMsg);
 
+	void serialConnectA255::imageCallback(const sensor_msgs::ImageConstPtr& msg);
+
 };
+
+void serialConnectA255::imageCallback(const sensor_msgs::ImageConstPtr& msg)
+{
+  try
+  {
+    cv::imshow("view", cv_bridge::toCvShare(msg, "bgr8")->image);
+    cv::waitKey(30);
+  }
+  catch (cv_bridge::Exception& e)
+  {
+    ROS_ERROR("Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
+  }
+}
 
 //Open the Serial Port
 int serialConnectA255::openPort()
