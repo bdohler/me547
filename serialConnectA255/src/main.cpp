@@ -1163,6 +1163,26 @@ void list_circle_xyr(std::vector<Vec3f> v)
 	return;
 }
 
+std::vector<Vec3f> sort_circles(std::vector<Vec3f> v)
+{
+	int size;
+	size = v.size();
+	Vec3f temp;
+    for(int i=0; i<size; i++)
+    {
+        for(int j=size-1; j>i; j--)
+        {
+            if(v[j][0]<v[j-1][0])
+            {
+                temp=v[j-1];
+                v[j-1]=v[j];
+                v[j]=temp;
+            }
+        }
+    }
+    return v;
+}
+
 cv::Mat maximize_contrast(cv::Mat image, int threshold) 
 {
 	cv::Mat new_image = Mat::zeros(image.size(), image.type());
@@ -1245,6 +1265,35 @@ void x_imageCallback(const sensor_msgs::ImageConstPtr& msg)
     ROS_ERROR("Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
   }
   got_marker_image = true;
+}
+
+cv::Vec3f camPoint_to_CRSvector(std::vector<Vec3f> markers, int marker_number)
+{
+	double xpix, ypix;
+	xpix = 0.00000081;
+	ypix = 0.00000081;
+
+	int i, j;
+	i = markers[marker_number][0];
+	j = markers[marker_number][1];
+
+	double w, f, u, v;
+	f = 0.0043;
+	w = 0.9;
+	u = i*xpix*(f - w)/f;
+	v = j*ypix*(f - w)/f;
+
+	float x, y, z;
+	x = v+0.515;
+	y = u+0.890;
+	z = -v+w+f;
+
+	cv::Vec3f marker_vec;
+	marker_vec[0] = x;
+	marker_vec[1] = y;
+	marker_vec[2] = z;
+
+	return marker_vec;
 }
 
 //MAIN LOOP
@@ -1387,7 +1436,17 @@ int main(int argc, char **argv)
 	display_image_to_screen(image2_with_circles, image2_unfiltered);
 	save_image(image2_unfiltered, "Markers");
 	cout << "Blue Circles" << endl;
+	circles_filtered = sort_circles(circles_filtered);
 	list_circle_xyr(circles_filtered);
+	
+	cout << "go get the markers" << endl;
+	cv::Vec3f red_marker, blue_marker, green_marker;
 
+	red_marker = camPoint_to_CRSvector(circles_filtered, 0);
+	green_marker = camPoint_to_CRSvector(circles_filtered, 1);
+	blue_marker = camPoint_to_CRSvector(circles_filtered, 2);
+
+	
+	
 	cout << "complete" << endl;
 }
