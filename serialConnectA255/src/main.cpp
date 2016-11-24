@@ -126,7 +126,6 @@ public:
 		//Subscribe to a topic
 
 		//Create an internal node handler
-
 		ros::NodeHandle n_private("serial");
 
 		//Grab the default values from the parameter server
@@ -137,6 +136,7 @@ public:
 		// Build CV subscriber
 		
 	}
+
 
 	//De-constructor for the Class.
 	~serialConnectA255()
@@ -185,7 +185,8 @@ public:
 
 	static void imageCallback(const sensor_msgs::ImageConstPtr& msg);
 };
-serialConnectA255 serial;
+serialConnectA255* serial;
+
 
 void serialConnectA255::imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
@@ -756,6 +757,7 @@ int serialConnectA255::moveRobot(double x, double y, double z, double z_rot, dou
 {
 	// Get Current Arm Position
 	getArmPositionRW();
+	ROS_INFO("Got Arm Positon");
 	// Calculate Offsets between current and desired
 	double offsetX = 0.0;
 	double offsetY = 0.0;
@@ -1086,11 +1088,11 @@ cv::vector<Vec6f> vectors_2d_to_3d(cv::vector<Vec4i> two_d_vector, double scale,
 	for(size_t i = 0; i < two_d_vector.size(); i++)
 	{
 		cv::Vec4i line = two_d_vector[i];
-		startX = line[0]*scale+offsetX;
-		startY = line[1]*scale+offsetY;
+		startX = (line[0]-640/2)*scale+offsetX;
+		startY = (line[1]-480/2)*scale+offsetY;
 		startZ = heightZ;
-		endX = line[2]*scale+offsetX;
-		endY = line[3]*scale+offsetY;
+		endX = (line[2]-640/2)*scale+offsetX;
+		endY = (line[3]-480/2)*scale+offsetY;
 		endZ = heightZ;
 		cv::Vec6f newVector(startX, startY, startZ, endX, endY, endZ);
 		three_d_vector.push_back(newVector);
@@ -1279,8 +1281,8 @@ cv::Vec3f camPoint_to_CRSvector(std::vector<Vec3f> markers, int marker_number)
 	ypix = 0.00000081;
 
 	int i, j;
-	i = markers[marker_number][0];
-	j = markers[marker_number][1];
+	i = markers[marker_number][0]-640/2;
+	j = markers[marker_number][1]-480/2;
 
 	double w, f, u, v;
 	f = 0.0043;
@@ -1291,7 +1293,7 @@ cv::Vec3f camPoint_to_CRSvector(std::vector<Vec3f> markers, int marker_number)
 	float x, y, z;
 	x = v+0.515;
 	y = u+0.890;
-	z = -v+w+f;
+	z = 0.09;//0.9943-w-f;//-w+w+f;
 
 	cv::Vec3f marker_vec;
 	marker_vec[0] = x;
@@ -1303,13 +1305,14 @@ cv::Vec3f camPoint_to_CRSvector(std::vector<Vec3f> markers, int marker_number)
 
 void Move_To_Position(Vec3f pos)
 {
-	serial.moveRobot(pos[0], pos[1], pos[2], 0, 0, 90);
+	ROS_INFO("Moving to Position:");
+	ROS_INFO("(x,y,z)[mm] = (%f, %f, %f)", pos[0]*1000, pos[1]*1000, pos[2]*999);
+	int temp = serial->moveRobot(pos[0]*1000, pos[1]*1000, pos[2]*1000, 0, 0, 90);
 }
 
-void Grab_Marker(int index)
+void Grab_Marker(cv::Vec3f marker_point)
 {
-	cv::Vec3f marker_point;
-	// Get marker_point
+	ROS_INFO("Grabbing Marker");
 	cv::Vec3f marker_hover_point = marker_point;
 	marker_hover_point[2] = (float)marker_hover_point[2] + 0.05;
 
@@ -1317,16 +1320,16 @@ void Grab_Marker(int index)
 	//sleepms(1000);
 	Move_To_Position(marker_point);
 	//sleepms(1000);
-	serial.grip_close();
+	ROS_INFO("Closing");
+	serial->grip_close();
 	//sleepms(1000);
 	Move_To_Position(marker_hover_point);
 	//sleepms(1000);
 }
 
-void Place_Marker(int index)
+void Place_Marker(cv::Vec3f marker_point)
 {
-	cv::Vec3f marker_point;
-	// Get marker_point
+	ROS_INFO("Placing Marker");
 	cv::Vec3f marker_hover_point = marker_point;
 	marker_hover_point[2] = (float)marker_hover_point[2] + 0.05;
 
@@ -1334,7 +1337,7 @@ void Place_Marker(int index)
 	//sleepms(1000);
 	Move_To_Position(marker_point);
 	//sleepms(1000);
-	serial.grip_open();
+	serial->grip_open();
 	//sleepms(1000);
 	Move_To_Position(marker_hover_point);
 	//sleepms(1000);
@@ -1343,8 +1346,8 @@ void Place_Marker(int index)
 void Draw_Line(std::vector<cv::Vec6f> lines)
 {
 	// sx, sy, ex, ey
-
-	double scale = 1;
+	ROS_INFO("Drawing Line");
+	double scale = 0.001;
 	double draw_Z = 0.4;
 	double hover_Z = 0.3;
 
@@ -1390,16 +1393,18 @@ void Draw_Line(std::vector<cv::Vec6f> lines)
 		{
 			cv::Vec3f waypoint = waypoints.at(j);
 			/*
-			ik_angles = serial.invKine(waypoint[0], waypoint[1], waypoint[2], draw_yaw);
-			serial.moveTheta(speed, ik_angles[0], ik_angles[1], ik_angles[2], ik_angles[3], ik_angles[4]);
+			ik_angles = serial->invKine(waypoint[0], waypoint[1], waypoint[2], draw_yaw);
+			serial->moveTheta(speed, ik_angles[0], ik_angles[1], ik_angles[2], ik_angles[3], ik_angles[4]);
 			*/
-			serial.moveRobot(waypoint[0], waypoint[1], waypoint[2], 0, 0, 90);
+			Move_To_Position(waypoint);
+			//serial->moveRobot(waypoint[0], waypoint[1], waypoint[2], 0, 0, 90);
 		}
 	}
 }
 
-void Draw_Colored_Lines(cv::Mat source, int marker_index)
+void Draw_Colored_Lines(cv::Mat source, cv::Vec3f marker_point)
 {
+	ROS_INFO("Executing Draw Line");
 	double scale = 1.0;
 	double offsetX = 0.27;
 	double offsetY = 0.0;
@@ -1408,13 +1413,13 @@ void Draw_Colored_Lines(cv::Mat source, int marker_index)
 	cv::vector<cv::Vec4i> pixels = generate_vector_of_lines(source);
 	cv::vector<cv::Vec6f> lines = vectors_2d_to_3d(pixels , scale, offsetX, offsetY, heightZ);
 
-	serial.goReady();
+	serial->goReady();
 
-	Grab_Marker(marker_index);
+	Grab_Marker(marker_point);
 	Draw_Line(lines);
-	Place_Marker(marker_index);
+	Place_Marker(marker_point);
 
-	serial.goReady();
+	serial->goReady();
 }
 
 
@@ -1430,38 +1435,44 @@ int main(int argc, char **argv)
 	printf("Hello World\n");
 	ros::init(argc, argv, "serial");
 
+	serial = new serialConnectA255();
+	serial->openPort();
+	serial->initialize();
+
+	serial->moveRobot(300, 0.0, 300, 0, 0, 90);
+
 	// //System.out.println(Core.getBuildInformation());
-	// Mat image;
-	// Mat vector_image;
-	// Mat blurred_image;
-	// std::vector<Mat> bgr;
-	// Mat blue;
-	// Mat green;
-	// Mat red;	
-	// Mat final_result;
-	// int blur_strength = 9;
-	// std::string image_to_draw_file_name = "6.jpg";
+	Mat image;
+	Mat vector_image;
+	Mat blurred_image;
+	std::vector<Mat> bgr;
+	Mat blue;
+	Mat green;
+	Mat red;	
+	Mat final_result;
+	int blur_strength = 9;
+	std::string image_to_draw_file_name = "/home/me-547/Desktop/8.png";
 	std::string workplace_image_test = "/home/me547/Desktop/8.png";
 
 
 
-	// image = fetch_image(image_to_draw_file_name);
-	// display_image_to_screen(image);
-	// blurred_image = blur_image(image, blur_strength);
-	// display_image_to_screen(blurred_image);
+	image = fetch_image(image_to_draw_file_name);
+	display_image_to_screen(image);
+	blurred_image = blur_image(image, blur_strength);
+	display_image_to_screen(blurred_image);
 
-	// bgr = seperate_channels(blurred_image);
+	bgr = seperate_channels(blurred_image);
 
-	// blue = create_vectorized_image(bgr[0], "BLUE");
-	// green = create_vectorized_image(bgr[1], "GREEN");
-	// red = create_vectorized_image(bgr[2], "RED");
-	// final_result = red + blue + green;
-	// final_result = Scalar(255, 255, 255) - final_result;
-	// display_image_to_screen(final_result);
-	// display_image_to_screen(red);
+	blue = create_vectorized_image(bgr[0], "BLUE");
+	green = create_vectorized_image(bgr[1], "GREEN");
+	red = create_vectorized_image(bgr[2], "RED");
+	final_result = red + blue + green;
+	final_result = Scalar(255, 255, 255) - final_result;
+	display_image_to_screen(final_result);
+	display_image_to_screen(red);
 
-	// //Workspace image to find marker in
-	// //Currently a test image. 
+	//Workspace image to find marker in
+	//Currently a test image. 
 	
 	std::vector<Mat> bgr2;
 	cv::Mat blue2;
@@ -1574,6 +1585,9 @@ int main(int argc, char **argv)
 	blue_marker = camPoint_to_CRSvector(circles_filtered, 2);
 
 
+
+	Draw_Colored_Lines(red, red_marker);
 	
 	cout << "complete" << endl;
+	serial->closePort();
 }
