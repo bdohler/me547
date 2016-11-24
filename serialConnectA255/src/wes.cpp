@@ -19,8 +19,6 @@ void Draw_Line(std::vector<Vec6f> lines)
 	// sx, sy, ex, ey
 
 	double scale = 1;
-	double offsetX = 0;
-	double offsetY = 0;
 	double draw_Z = 0;
 	double hover_Z = 0;
 
@@ -65,8 +63,11 @@ void Draw_Line(std::vector<Vec6f> lines)
 		for(int j = 0; i< waypoints.size(); j++)
 		{
 			waypoint = waypoints.at(j);
+			/*
 			ik_angles = serial.invKine(waypoint[0], waypoint[1], waypoint[2], draw_yaw);
 			serial.moveTheta(speed, ik_angles[0], ik_angles[1], ik_angles[2], ik_angles[3], ik_angles[4]);
+			*/
+			serial.moveRobot(waypoint[0], waypoint[1], waypoint[2], 0, 0, 90);
 		}
 	}
 
