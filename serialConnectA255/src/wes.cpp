@@ -14,6 +14,65 @@
 	// display_image_to_screen(red);
 
 
+
+void Draw_Colored_Lines(cv::Mat source, int marker_index)
+{
+	double scale = 1.0;
+	double offsetX = 0.27;
+	double offsetY = 0.0;
+	double heightZ = 0.0;
+
+	cv::vector<Vec4i> pixels = generate_vector_of_lines(cv::Mat source);
+	cv::vector<Vec6f> lines = vectors_2d_to_3d(pixels , scale, offsetX, offsetY, heightZ);
+
+	serial.goReady();
+
+	Grab_Marker(marker_index);
+	Draw_Line(lines);
+	Place_Marker(marker_index);
+
+	serial.goReady();
+}
+
+void Grab_Marker(int index)
+{
+	cv::vector<Vec3f> marker_point;
+	// Get marker_point
+	cv::vector<Vec3f> marker_hover_point = marker_point;
+	marker_hover_point[2] = marker_hover_point[2] + 0.05;
+
+	Move_To_Position(marker_hover_point);
+	sleepms(1000);
+	Move_To_Position(marker_point);
+	sleepms(1000);
+	serial.grip_close();
+	sleepms(1000);
+	Move_To_Position(marker_hover_point);
+	sleepms(1000);
+}
+
+void Place_Marker(int index)
+{
+	cv::vector<Vec3f> marker_point;
+	// Get marker_point
+	cv::vector<Vec3f> marker_hover_point = marker_point;
+	marker_hover_point[2] = marker_hover_point[2] + 0.05;
+
+	Move_To_Position(marker_hover_point);
+	sleepms(1000);
+	Move_To_Position(marker_point);
+	sleepms(1000);
+	serial.grip_open();
+	sleepms(1000);
+	Move_To_Position(marker_hover_point);
+	sleepms(1000);
+}
+
+void Move_To_Position(Vec3f pos)
+{
+	serial.moveRobot(pos[0], pos[1], pos[2], 0, 0, 90)
+}
+
 void Draw_Line(std::vector<Vec6f> lines)
 {
 	// sx, sy, ex, ey
