@@ -8,11 +8,14 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  cv_bridge
+  image_transport
+  sensor_msgs
 )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-
+find_package( OpenCV 2 )
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -118,6 +121,7 @@ catkin_package(
 # include_directories(include)
 include_directories(
   ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -140,6 +144,8 @@ include_directories(
 ## Specify libraries to link a library or executable target against
  target_link_libraries(serialConnectA255
    ${catkin_LIBRARIES}
+   ${OpenCV_Libs}
+   ${OpenCV_LIBRARIES}
  )
 
 #############

@@ -46,10 +46,6 @@ This program contains the source code for controlling the CRS A255 arm
 #include <stdint.h>
 #include <math.h>
 
-#include <image_transport/image_transport.h>
-#include <opencv2/highgui/highgui.hpp>
-#include <cv_bridge/cv_bridge.h>
-
 // includes for computer vision
 // #include <Windows.h>
 #include "opencv2/opencv.hpp"
@@ -122,16 +118,14 @@ public:
 		//Subscribe to a topic
 
 		//Create an internal node handler
-
-		ros::NodeHandle n_private("serial");
+		ros::NodeHandle n_private("~");
 
 		//Grab the default values from the parameter server
 		n_private.param("serial_port", serial_port_, std::string("/dev/ttyUSB0"));
 		// Baud Rate
 		n_private.param("baud_rate", baud_rate_, 57600); // Baud Rate
 
-		// Build CV subscriber
-		
+
 	}
 
 	//De-constructor for the Class.
@@ -179,22 +173,7 @@ public:
 
 	//void cmdVelCallback(const geometry_msgs::Twist::ConstPtr& cmdVelMsg);
 
-	static void imageCallback(const sensor_msgs::ImageConstPtr& msg);
 };
-
-void serialConnectA255::imageCallback(const sensor_msgs::ImageConstPtr& msg)
-{
-	ROS_INFO("Got Image");
-  try
-  {
-    cv::imshow("view", cv_bridge::toCvShare(msg, "bgr8")->image);
-    cv::waitKey(30);
-  }
-  catch (cv_bridge::Exception& e)
-  {
-    ROS_ERROR("Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
-  }
-}
 
 //Open the Serial Port
 int serialConnectA255::openPort()
@@ -983,13 +962,10 @@ cv::Mat fetch_image(std::string file_name)
 	return image;
 }
 
-void display_image_to_screen(cv::Mat image_to_be_displayed, cv::Mat second_image_to_be_displayed=cv::Mat(30, 40, DataType<float>::type))//, bool second_image)
+void display_image_to_screen(cv::Mat image_to_be_displayed)
 {
 	imshow("Title", image_to_be_displayed);
-	//if(second_image)
-	//{
-		imshow("Second Title", second_image_to_be_displayed);
-	//}
+
 	waitKey(10000);
 }
 
@@ -1188,23 +1164,6 @@ cv::Mat maximize_contrast(cv::Mat image, int threshold)
 	return new_image;
 }
 
-cv::Mat contrast_and_brightness(cv::Mat image, double alpha, int beta)
-{
-	 Mat new_image = Mat::zeros( image.size(), image.type() );
-
-	 /// Do the operation new_image(i,j) = alpha*image(i,j) + beta
-	 for( int y = 0; y < image.rows; y++ )
-	    { for( int x = 0; x < image.cols; x++ )
-	         { for( int c = 0; c < 3; c++ )
-	              {
-	      new_image.at<Vec3b>(y,x)[c] =
-	         saturate_cast<uchar>( alpha*( image.at<Vec3b>(y,x)[c] ) + beta );
-	             }
-	    }
-	    }
-	return new_image;
-}
-
 
 std::vector<Vec3f> filter_circles(std::vector<Vec3f> v) 
 {
@@ -1216,7 +1175,7 @@ std::vector<Vec3f> filter_circles(std::vector<Vec3f> v)
 		float y = v[i][1];
 		float r = v[i][2];
 		//result.push_back(v[i]);
-		if(y > 220.0 && y < 260.0 && x > 280.0 && x < 420.0)
+		if(y < 200.0 && x < 400.0)
 		{
 			result.push_back(v[i]);
 			cout << v[i] << endl;
@@ -1226,33 +1185,11 @@ std::vector<Vec3f> filter_circles(std::vector<Vec3f> v)
 	return result;
 }
 
-
-cv::Mat image2;
-bool got_marker_image = false;
-void x_imageCallback(const sensor_msgs::ImageConstPtr& msg)
-{
-	if (got_marker_image) return;
-
-	ROS_INFO("Got Image");
-  try
-  {
-    //cv::imshow("view", cv_bridge::toCvShare(msg, "bgr8")->image2);
-    image2 = cv_bridge::toCvCopy(msg, "bgr8")->image;
-    cv::waitKey(30);
-  }
-  catch (cv_bridge::Exception& e)
-  {
-    ROS_ERROR("Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
-  }
-  got_marker_image = true;
-}
-
 //MAIN LOOP
 int main(int argc, char **argv)
 {
 
 	printf("Hello World\n");
-	ros::init(argc, argv, "serial");
 
 	// //System.out.println(Core.getBuildInformation());
 	// Mat image;
@@ -1265,7 +1202,7 @@ int main(int argc, char **argv)
 	// Mat final_result;
 	// int blur_strength = 9;
 	// std::string image_to_draw_file_name = "6.jpg";
-	std::string workplace_image_test = "/home/me547/Desktop/8.png";
+	std::string workplace_image_test = "/home/me-547/Desktop/8.png";
 
 
 
@@ -1286,108 +1223,72 @@ int main(int argc, char **argv)
 
 	// //Workspace image to find marker in
 	// //Currently a test image. 
-	
+
+	cout << "Starting second component" << endl;
+	cv::Mat image2;
 	std::vector<Mat> bgr2;
 	cv::Mat blue2;
 	cv::Mat green2;
 	cv::Mat red2;
-	cv::Mat image2_unfiltered;
+	image2 = fetch_image(workplace_image_test);
+	display_image_to_screen(image2);
+	image2 = maximize_contrast(image2, 50);
+	display_image_to_screen(image2);
+	bgr2 = seperate_channels(image2);
 
-	serialConnectA255 serial();
-
-
-	ros::NodeHandle n_ = ros::NodeHandle("Serial");
-	//cv::namedWindow("overhead_view");
-	//cv::startWindowThread();
-	image_transport::ImageTransport it(n_);
-	image_transport::Subscriber sub = it.subscribe("/webcam/image_raw", 15, x_imageCallback);
-
-
-
-	ROS_INFO("Looping");
-	while(!got_marker_image)
-	{
-		ros::spinOnce();
-		ROS_INFO("*");
-
-	}
-
-	cout << "Finding markers in the scene" << endl;
-	//image2 = fetch_image(workplace_image_test);
-	image2_unfiltered = image2;
-	display_image_to_screen(image2_unfiltered);
-	//image2 = maximize_contrast(image2, 50);
-	// display_image_to_screen(image2);
-	//bgr2 = seperate_channels(image2);
-	//image2 = contrast_and_brightness(image2, 2.0, 0);
 	cout << "Starting grayscale conversion" << endl;
 	//Convert all three channels to gray, and blur to avoid false detection
-	//cvtColor(bgr2[0], blue2, CV_BGR2GRAY);
-	//cvtColor(bgr2[1], green2, CV_BGR2GRAY);
-	//cvtColor(bgr2[2], red2, CV_BGR2GRAY);
-	// GaussianBlur(blue2, blue2, Size(9,9), 2, 2);
-	// GaussianBlur(green2, green2, Size(9,9), 2, 2);	
-	// GaussianBlur(red2, red2, Size(9,9), 2, 2);
-	// display_image_to_screen(blue2);
-	// display_image_to_screen(green2);
-	// display_image_to_screen(red2);
-
-	cvtColor(image2, image2, CV_BGR2GRAY);
-	//GaussianBlur(image2, image2, Size(5,5), 2, 2);
-
+	cvtColor(bgr2[0], blue2, CV_BGR2GRAY);
+	cvtColor(bgr2[1], green2, CV_BGR2GRAY);
+	cvtColor(bgr2[2], red2, CV_BGR2GRAY);
+	GaussianBlur(blue2, blue2, Size(31,31), 2, 2);
+	GaussianBlur(green2, green2, Size(31,31), 2, 2);	
+	GaussianBlur(red2, red2, Size(31,31), 2, 2);
+	display_image_to_screen(blue2);
+	display_image_to_screen(green2);
+	display_image_to_screen(red2);
 
 	//Store the circles in a vector of three floats for each channel
 	cout << "Running HoughCircles" << endl;
-	std::vector<Vec3f> circles;
-	std::vector<Vec3f> circles_filtered;
+	std::vector<Vec3f> blue_circles;
+	std::vector<Vec3f> green_circles;
+	std::vector<Vec3f> red_circles;
+	std::vector<Vec3f> blue_circles_filtered;
+	std::vector<Vec3f> green_circles_filtered;
+	std::vector<Vec3f> red_circles_filtered;
 
-	// std::vector<Vec3f> blue_circles;
-	// std::vector<Vec3f> green_circles;
-	// std::vector<Vec3f> red_circles;
-	// std::vector<Vec3f> blue_circles_filtered;
-	// std::vector<Vec3f> green_circles_filtered;
-	// std::vector<Vec3f> red_circles_filtered;
-
-	int minimum_dist_btwn_centres = 15;
+	int minimum_dist_btwn_centres = 30;
 	int upper_internal_canny_threshold = 40;
-	int threshold_centre_detect = 4;
-	int min_radius = 6;
-	int max_radius = 14;
-
-	HoughCircles(image2, circles, CV_HOUGH_GRADIENT, 1, minimum_dist_btwn_centres, upper_internal_canny_threshold, threshold_centre_detect, min_radius, max_radius);
-	circles_filtered = filter_circles(circles);
-
-	// HoughCircles(blue2, blue_circles, CV_HOUGH_GRADIENT, 1, minimum_dist_btwn_centres, upper_internal_canny_threshold, threshold_centre_detect, min_radius, max_radius);
-	// HoughCircles(green2, green_circles, CV_HOUGH_GRADIENT, 1, minimum_dist_btwn_centres, upper_internal_canny_threshold, threshold_centre_detect, min_radius, max_radius);
-	// HoughCircles(red2, red_circles, CV_HOUGH_GRADIENT, 1, minimum_dist_btwn_centres, upper_internal_canny_threshold, threshold_centre_detect, min_radius, max_radius);
-	// blue_circles_filtered = filter_circles(blue_circles);
-	// green_circles_filtered = filter_circles(green_circles);
-	// red_circles_filtered = filter_circles(red_circles);
-
+	int threshold_centre_detect = 1;
+	int max_radius = 20;
+	HoughCircles(blue2, blue_circles, CV_HOUGH_GRADIENT, 1, minimum_dist_btwn_centres, upper_internal_canny_threshold, threshold_centre_detect, 0, max_radius);
+	HoughCircles(green2, green_circles, CV_HOUGH_GRADIENT, 1, minimum_dist_btwn_centres, upper_internal_canny_threshold, threshold_centre_detect, 0, max_radius);
+	HoughCircles(red2, red_circles, CV_HOUGH_GRADIENT, 1, minimum_dist_btwn_centres, upper_internal_canny_threshold, threshold_centre_detect, 0, max_radius);
+	blue_circles_filtered = filter_circles(blue_circles);
+	green_circles_filtered = filter_circles(green_circles);
+	red_circles_filtered = filter_circles(red_circles);
 	cout << "Displaying results of HoughCircles" << endl;
 	// cout << blue_circles[0][0] << endl;
 	// cout << green_circles[0][0] << endl;
 	// cout << red_circles[0][0] << endl;
 	//Draw markers on the images of the circles
-	// cv::Mat blue_with_circles;
-	// cv::Mat green_with_circles;
-	// cv::Mat red_with_circles;
-	cv::Mat image2_with_circles;
+	cv::Mat blue_with_circles;
+	cv::Mat green_with_circles;
+	cv::Mat red_with_circles;
 
 	cout << "Drawing circles" << endl;		
-	// blue_with_circles = draw_circles(blue2, blue_circles_filtered);
-	// green_with_circles = draw_circles(green2, green_circles_filtered);
-	// red_with_circles =  draw_circles(red2, red_circles_filtered);
-	image2_with_circles = draw_circles(image2, circles_filtered);
+	blue_with_circles = draw_circles(blue2, blue_circles_filtered);
+	green_with_circles = draw_circles(green2, green_circles_filtered);
+	red_with_circles =  draw_circles(red2, red_circles_filtered);
+
 	//Display the results
 	cout << "Displaying the final images" << endl;
-	// display_image_to_screen(blue_with_circles);
-	// display_image_to_screen(green_with_circles);
-	// display_image_to_screen(red_with_circles);
-	display_image_to_screen(image2_with_circles, image2_unfiltered);
-	save_image(image2_unfiltered, "Markers");
+	display_image_to_screen(blue_with_circles);
+	display_image_to_screen(green_with_circles);
+	display_image_to_screen(red_with_circles);
+
 	cout << "Blue Circles" << endl;
-	list_circle_xyr(circles_filtered);
+	list_circle_xyr(blue_circles);
 
 	cout << "complete" << endl;
 }
