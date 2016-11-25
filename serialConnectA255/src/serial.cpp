@@ -1,6 +1,31 @@
+#include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/algorithm/string/trim.hpp>
+#include "ros/ros.h"
+#include "std_msgs/String.h"
+#include <sstream>
+#include <algorithm>
+#include <pthread.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdexcept>
+#include <stdint.h>
+#include <math.h>
 
+#include <image_transport/image_transport.h>
+#include <opencv2/highgui/highgui.hpp>
+#include <cv_bridge/cv_bridge.h>
 
-#include "serial.cpp"
+#include "serial.h"
+
+using namespace cv;
+using namespace std;
+using namespace boost;
 
 void serialConnectA255::imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
@@ -470,7 +495,7 @@ double* serialConnectA255::invKine(double desX, double desY, double desZ, double
     cout << "DesTh_3 : " << invK[2] << "\n";
     cout << "DesTh_4 : " << invK[3] << "\n";
     cout << "DesTh_5 : " << invK[4] << "\n";
-    sleepms(500);
+    sleepms(50);
     
     return invK;
 }
@@ -618,7 +643,9 @@ int serialConnectA255::moveRobot(double x, double y, double z, double z_rot, dou
     }
 
     //Assuming speed of 10, need this delay. If you change your speed, you can change this delay but be very careful
-    sleepms(10000);
+    sleepms(1000);
+
+    return 0;
 }
 
 void serialConnectA255::sleepms(int milliseconds)

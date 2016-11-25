@@ -17,28 +17,50 @@
 #include "opencv2/opencv.hpp"
 
 #include "robotix.h"
+#include "colors.h"
+#include "variables.h"
+
+using namespace cv;
+using namespace std;
+using namespace boost;
+
+#define GRIPPER_LENGTH 195
 
 
 void Move_To_Position(Vec3f pos)
 {
-    ROS_INFO("Moving to Position:");
-    ROS_INFO("(x,y,z)[mm] = (%f, %f, %f)", pos[0]*1000, pos[1]*1000, pos[2]*999);
-    int temp = serial->moveRobot(pos[0]*1000, pos[1]*1000, pos[2]*1000, 0, 0, 90);
+    ROS_INFO("  Moving to Position:");
+    float theta = atan2(pos[1], pos[0]);
+    float gripper_x = GRIPPER_LENGTH*cos(theta);
+    float gripper_y = GRIPPER_LENGTH*sin(theta);
+    ROS_INFO("    (x,y,z)[mm] = (%f, %f, %f)", pos[0]*1000, pos[1]*1000, pos[2]*999);
+    int temp = serial->moveRobot(pos[0]*1000-gripper_x, pos[1]*1000-gripper_y, pos[2]*1000, 0, 0, 90);
+
+    if(temp == 0)
+    {
+        serial->sleepms(3000);
+        ROS_INFO("Successful position request");
+    }
+    else if(temp == -1)
+    {
+        ROS_INFO("Position request outside the workspace");
+    }
+    else
+    {
+        ROS_INFO("ERROR in Move_To_Position function");
+    }
 }
 
 void Grab_Marker(cv::Vec3f marker_point)
 {
     ROS_INFO("Grabbing Marker");
+    serial->grip_open ();
     cv::Vec3f marker_hover_point = marker_point;
-    marker_hover_point[2] = (float)marker_hover_point[2] + 0.05;
+    marker_hover_point[2] = (float)marker_hover_point[2] + 0.1;
 
     Move_To_Position(marker_hover_point);
-    //sleepms(1000);
     Move_To_Position(marker_point);
-    //sleepms(1000);
-    ROS_INFO("Closing");
     serial->grip_close();
-    //sleepms(1000);
     Move_To_Position(marker_hover_point);
     //sleepms(1000);
 }
@@ -47,14 +69,11 @@ void Place_Marker(cv::Vec3f marker_point)
 {
     ROS_INFO("Placing Marker");
     cv::Vec3f marker_hover_point = marker_point;
-    marker_hover_point[2] = (float)marker_hover_point[2] + 0.05;
+    marker_hover_point[2] = (float)marker_hover_point[2] + 0.1;
 
     Move_To_Position(marker_hover_point);
-    //sleepms(1000);
     Move_To_Position(marker_point);
-    //sleepms(1000);
     serial->grip_open();
-    //sleepms(1000);
     Move_To_Position(marker_hover_point);
     //sleepms(1000);
 }
@@ -64,8 +83,8 @@ void Draw_Line(std::vector<cv::Vec6f> lines)
     // sx, sy, ex, ey
     ROS_INFO("Drawing Line");
     double scale = 0.001;
-    double draw_Z = 0.4;
-    double hover_Z = 0.3;
+    double draw_Z = 0.1;
+    double hover_Z = 0.15;
 
     double ik_angles[5] = {};
 
@@ -83,46 +102,50 @@ void Draw_Line(std::vector<cv::Vec6f> lines)
         cv::Vec3f start;
         start[0] = point[0];
         start[1] = point[1];
-        start[2] = point[2];
+        start[2] = draw_Z;
 
         // Get end point
         cv::Vec3f end;
         end[0] = point[3];
         end[1] = point[4];
-        end[2] = point[5];
+        end[2] = draw_Z;
 
         // Make hover points
         cv::Vec3f start_hover = start;
         start_hover[2] = hover_Z;
 
         cv::Vec3f end_hover = end;
-        start_hover[2] = hover_Z;
+        end_hover[2] = hover_Z;
 
-        // Append: start_hover, start, end, end_hover
-        std::vector<cv::Vec3f> waypoints;
-        waypoints.push_back(start_hover);
-        waypoints.push_back(start);
-        waypoints.push_back(end);
-        waypoints.push_back(end_hover);
+        ROS_INFO("Drawing Start start_hover");
+        Move_To_Position(start_hover);
+        ROS_INFO("Drawing Start");
+        Move_To_Position(start);
+        ROS_INFO("End Point");
+        Move_To_Position(end);
+        ROS_INFO("End Hover Point");
+        Move_To_Position(end_hover);
 
+        /*
         for(int j = 0; i< waypoints.size(); j++)
         {
             cv::Vec3f waypoint = waypoints.at(j);
             /*
             ik_angles = serial->invKine(waypoint[0], waypoint[1], waypoint[2], draw_yaw);
             serial->moveTheta(speed, ik_angles[0], ik_angles[1], ik_angles[2], ik_angles[3], ik_angles[4]);
-            */
+            *
             Move_To_Position(waypoint);
             //serial->moveRobot(waypoint[0], waypoint[1], waypoint[2], 0, 0, 90);
         }
+        */
     }
 }
 
 void Draw_Colored_Lines(cv::Mat source, cv::Vec3f marker_point)
 {
     ROS_INFO("Executing Draw Line");
-    double scale = 1.0;
-    double offsetX = 0.27;
+    double scale = 0.0001;
+    double offsetX = 0.5;
     double offsetY = 0.0;
     double heightZ = 0.0;
 

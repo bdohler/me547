@@ -6,7 +6,7 @@
 #include "variables.h"
 #include "serial.h"
 
-void Draw_Colored_Lines(cv::Mat source, int marker_index);
+void Draw_Colored_Lines(cv::Mat source, cv::Vec3f marker_point);
 
 void Move_To_Position(Vec3f pos);
 void Grab_Marker(cv::Vec3f marker_point);

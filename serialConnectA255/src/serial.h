@@ -20,6 +20,17 @@
 #include <stdint.h>
 #include <math.h>
 
+#include <image_transport/image_transport.h>
+#include <opencv2/highgui/highgui.hpp>
+#include <cv_bridge/cv_bridge.h>
+
+using namespace cv;
+using namespace std;
+using namespace boost;
+
+#define BUFFER_SIZE 1024
+#define MISSING_VALUE -1024
+
 class serialConnectA255
 {
 private:

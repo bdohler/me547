@@ -58,25 +58,25 @@ This program contains the source code for controlling the CRS A255 arm
 // #include "opencv2/imgcodecs/imgcodecs.hpp"
 // #include "opencv2/videoio/videoio.hpp"
 // # include "opencv2/core/version.hpp"
-
+#include "variables.h"
 #include "robotix.h"
 #include "colors.h"
 #include "serial.h"
-#include "variables.h"
 
-#define BUFFER_SIZE 1024
-#define MISSING_VALUE -1024
+
+
 
 //added namespace for computer vision
 using namespace cv;
 using namespace std;
 using namespace boost;
 
-
 cv::Mat image2;
 bool got_marker_image = false;
 serialConnectA255* serial;
-
+int clickX = 0;
+int clickY = 0;
+bool flagImageClickReceived = false;
 
 //MAIN LOOP
 int main(int argc, char **argv)
@@ -89,7 +89,6 @@ int main(int argc, char **argv)
 	serial->openPort();
 	serial->initialize();
 
-	serial->moveRobot(300, 0.0, 300, 0, 0, 90);
 
 	// //System.out.println(Core.getBuildInformation());
 	Mat image;
@@ -107,9 +106,9 @@ int main(int argc, char **argv)
 
 
 	image = fetch_image(image_to_draw_file_name);
-	display_image_to_screen(image);
+	//display_image_to_screen(image);
 	blurred_image = blur_image(image, blur_strength);
-	display_image_to_screen(blurred_image);
+	//display_image_to_screen(blurred_image);
 
 	bgr = seperate_channels(blurred_image);
 
@@ -118,8 +117,8 @@ int main(int argc, char **argv)
 	red = create_vectorized_image(bgr[2], "RED");
 	final_result = red + blue + green;
 	final_result = Scalar(255, 255, 255) - final_result;
-	display_image_to_screen(final_result);
-	display_image_to_screen(red);
+	//display_image_to_screen(final_result);
+	//display_image_to_screen(red);
 
 	//Workspace image to find marker in
 	//Currently a test image. 
@@ -152,11 +151,52 @@ int main(int argc, char **argv)
 	cout << "Finding markers in the scene" << endl;
 	//image2 = fetch_image(workplace_image_test);
 	image2_unfiltered = image2;
-	display_image_to_screen(image2_unfiltered);
+	//display_image_to_screen(image2_unfiltered);
+	cv::namedWindow("Workspace");
+	cv::setMouseCallback("Workspace", onMouse, (void*)NULL);
+
+	while(ros::ok())
+	{
+		got_marker_image = false;
+		while(!got_marker_image)
+		{
+			ros::spinOnce();
+			ROS_INFO("*");
+
+		}
+
+		flagImageClickReceived = false;
+		cout << "Click the image" << endl;
+		while(flagImageClickReceived == false && ros::ok())
+		{
+			cout << "*" << endl;
+			cv::imshow("Workspace", image2_unfiltered);
+			//ros::Duration(1.0).sleep();
+			waitKey(100);
+		}
+		//cv::destroyWindow("Workspace");
+		std::vector<Vec3f> clickedPoints;
+
+		Vec3f clickedPoint(clickX, clickY, 0);
+		clickedPoints.push_back(clickedPoint);
+
+		cv::Vec3f first_marker;
+		first_marker =  camPoint_to_CRSvector(clickedPoints, 0);
+
+		if (ros::ok())
+		{
+			Draw_Colored_Lines(red, first_marker);
+		}	
+	}
+
+	cv::destroyWindow("Workspace");
+
+
 	//image2 = maximize_contrast(image2, 50);
 	// display_image_to_screen(image2);
 	//bgr2 = seperate_channels(image2);
 	//image2 = contrast_and_brightness(image2, 2.0, 0);
+	/*       --image processing for finding markers removed--
 	cout << "Starting grayscale conversion" << endl;
 	//Convert all three channels to gray, and blur to avoid false detection
 	//cvtColor(bgr2[0], blue2, CV_BGR2GRAY);
@@ -223,20 +263,24 @@ int main(int argc, char **argv)
 	// display_image_to_screen(red_with_circles);
 	display_image_to_screen(image2_with_circles, image2_unfiltered);
 	save_image(image2_unfiltered, "Markers");
+	
+
 	cout << "Blue Circles" << endl;
+
 	circles_filtered = sort_circles(circles_filtered);
 	list_circle_xyr(circles_filtered);
 	
 	cout << "go get the markers" << endl;
 	cv::Vec3f red_marker, blue_marker, green_marker;
+	
+
 
 	red_marker = camPoint_to_CRSvector(circles_filtered, 0);
 	green_marker = camPoint_to_CRSvector(circles_filtered, 1);
 	blue_marker = camPoint_to_CRSvector(circles_filtered, 2);
+	*/
 
 
-
-	Draw_Colored_Lines(red, red_marker);
 	
 	cout << "complete" << endl;
 	serial->closePort();

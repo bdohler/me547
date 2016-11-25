@@ -1,3 +1,36 @@
+#include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/algorithm/string/trim.hpp>
+#include "ros/ros.h"
+#include "std_msgs/String.h"
+#include <sstream>
+#include <algorithm>
+#include <pthread.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdexcept>
+#include <stdint.h>
+#include <math.h>
+
+#include <image_transport/image_transport.h>
+#include <opencv2/highgui/highgui.hpp>
+#include <cv_bridge/cv_bridge.h>
+
+#include "opencv2/opencv.hpp"
+
+
+#include "colors.h"
+#include "variables.h"
+
+using namespace cv;
+using namespace std;
+using namespace boost;
+
 cv::Mat fetch_image(std::string file_name)
 {
     //Right now this function simply takes the stock image from the directory
@@ -15,9 +48,9 @@ cv::Mat fetch_image(std::string file_name)
     return image;
 }
 
-void display_image_to_screen(cv::Mat image_to_be_displayed, cv::Mat second_image_to_be_displayed=cv::Mat(30, 40, DataType<float>::type))//, bool second_image)
+void display_image_to_screen(cv::Mat image_to_be_displayed, cv::Mat second_image_to_be_displayed)//=cv::Mat(30, 40, DataType<float>::type))//, bool second_image)
 {
-    imshow("Title", image_to_be_displayed);
+    imshow("Workspace", image_to_be_displayed);
     //if(second_image)
     //{
         imshow("Second Title", second_image_to_be_displayed);
@@ -30,7 +63,7 @@ cv::Mat create_vectorized_image(cv::Mat image_to_be_vectorized, std::string colo
 
     cv::Mat edges;
     cv::Canny(image_to_be_vectorized, edges, 95, 100);
-    display_image_to_screen(edges);
+    //display_image_to_screen(edges);
     cv::Mat dx, dy;
     // sobel derivative approximation X direction of edges image
     cv::Sobel(edges, dx, CV_32F, 1, 0);
@@ -113,11 +146,11 @@ cv::vector<Vec6f> vectors_2d_to_3d(cv::vector<Vec4i> two_d_vector, double scale,
     for(size_t i = 0; i < two_d_vector.size(); i++)
     {
         cv::Vec4i line = two_d_vector[i];
-        startX = (line[0]-640/2)*scale+offsetX;
-        startY = (line[1]-480/2)*scale+offsetY;
+        startX = (line[0]-800/2)*scale+offsetX;
+        startY = (line[1]-600/2)*scale+offsetY;
         startZ = heightZ;
-        endX = (line[2]-640/2)*scale+offsetX;
-        endY = (line[3]-480/2)*scale+offsetY;
+        endX = (line[2]-800/2)*scale+offsetX;
+        endY = (line[3]-600/2)*scale+offsetY;
         endZ = heightZ;
         cv::Vec6f newVector(startX, startY, startZ, endX, endY, endZ);
         three_d_vector.push_back(newVector);
@@ -281,34 +314,34 @@ std::vector<Vec3f> filter_circles(std::vector<Vec3f> v)
 cv::Vec3f camPoint_to_CRSvector(std::vector<Vec3f> markers, int marker_number)
 {
     double xpix, ypix;
-    xpix = 0.00000081;
-    ypix = 0.00000081;
+    xpix = 0.0000081*8/7; //8/7 is a scale factor that was determined through experimental optimization
+    ypix = 0.0000081*9/8; //Similarly, 9/8 is a scale factor
 
     int i, j;
     i = markers[marker_number][0]-640/2;
-    j = markers[marker_number][1]-480/2;
+    j = markers[marker_number][1]-480/2;    
 
     double w, f, u, v;
     f = 0.0043;
-    w = 0.9;
+    w = 0.845;
     u = i*xpix*(f - w)/f;
     v = j*ypix*(f - w)/f;
 
     float x, y, z;
-    x = v+0.515;
-    y = u+0.890;
-    z = 0.09;//0.9943-w-f;//-w+w+f;
+    x = -v+0.525;
+    y = -u+0.090;
+    z = 0.13;//0.994 3-w-f;//-w+w+f;
+
+    ROS_INFO("X and Y displacement from camera click (x,y)[m]: %f, %f", x, y);
 
     cv::Vec3f marker_vec;
-    marker_vec[0] = x;
-    marker_vec[1] = y;
+    marker_vec[0] = x + 0.0575;
+    marker_vec[1] = y + 0.040;
     marker_vec[2] = z;
 
     return marker_vec;
 }
 
-cv::Mat image2;
-bool got_marker_image = false;
 void x_imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
     if (got_marker_image) return;
@@ -325,4 +358,13 @@ void x_imageCallback(const sensor_msgs::ImageConstPtr& msg)
     ROS_ERROR("Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
   }
   got_marker_image = true;
+}
+
+void onMouse(int evt, int x, int y, int flags, void* param) {
+    if(evt == CV_EVENT_LBUTTONDOWN && flagImageClickReceived == false) {
+        clickX = x;
+        clickY = y;
+        ROS_INFO("Got Click");
+        flagImageClickReceived = true;
+    }
 }
