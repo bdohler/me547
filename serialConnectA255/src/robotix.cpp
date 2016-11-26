@@ -51,6 +51,31 @@ void Move_To_Position(Vec3f pos)
     }
 }
 
+void Move_To_Position_Draw(Vec3f pos)
+{
+    ROS_INFO("  Moving to Position:");
+    float theta = atan2(pos[1], pos[0]);
+    float gripper_x = GRIPPER_LENGTH*cos(theta);
+    float gripper_y = GRIPPER_LENGTH*sin(theta);
+    ROS_INFO("    (x,y,z)[mm] = (%f, %f, %f)", pos[0]*1000, pos[1]*1000, pos[2]*999);
+    int temp = serial->moveRobot(pos[0]*1000-gripper_x, pos[1]*1000-gripper_y, pos[2]*1000, 0, 0, 90);
+
+    if(temp == 0)
+    {
+        serial->sleepms(1500);
+        ROS_INFO("Successful position request");
+    }
+    else if(temp == -1)
+    {
+        ROS_INFO("Position request outside the workspace");
+    }
+    else
+    {
+        ROS_INFO("ERROR in Move_To_Position function");
+    }
+}
+
+
 void Grab_Marker(cv::Vec3f marker_point)
 {
     ROS_INFO("Grabbing Marker");
@@ -81,10 +106,10 @@ void Place_Marker(cv::Vec3f marker_point)
 void Draw_Line(std::vector<cv::Vec6f> lines)
 {
     // sx, sy, ex, ey
-    ROS_INFO("Drawing Line");
+    ROS_INFO("Drawing Lines");
     double scale = 0.001;
-    double draw_Z = 0.1;
-    double hover_Z = 0.15;
+    double draw_Z = 0.05;
+    double hover_Z = 0.10;
 
     double ik_angles[5] = {};
 
@@ -93,9 +118,13 @@ void Draw_Line(std::vector<cv::Vec6f> lines)
     int speed = 10;
 
 
+    cout << "Number of lines is: " << lines.size() << endl;
+    //ROS_INFO("Number of lines to be drawn is: "+lines.size());
     // Iterate through points to go to
     for(int i = 0; i < lines.size(); i++)
     {
+
+        //ROS_INFO("Drawing line number: %i", i+1);
         cv::Vec6f point = lines.at(i);
         
         // Get first line point
@@ -116,16 +145,18 @@ void Draw_Line(std::vector<cv::Vec6f> lines)
 
         cv::Vec3f end_hover = end;
         end_hover[2] = hover_Z;
-
-        ROS_INFO("Drawing Start start_hover");
-        Move_To_Position(start_hover);
-        ROS_INFO("Drawing Start");
-        Move_To_Position(start);
-        ROS_INFO("End Point");
-        Move_To_Position(end);
-        ROS_INFO("End Hover Point");
-        Move_To_Position(end_hover);
-
+        if (ros::ok())
+        {
+            cout << "Segment " << i << " of " << lines.size() << endl;
+            ROS_INFO("      Drawing Start start_hover");
+            Move_To_Position_Draw(start_hover);
+            ROS_INFO("      Drawing Start");
+            Move_To_Position_Draw(start);
+            ROS_INFO("      End Point");
+            Move_To_Position_Draw(end);
+            ROS_INFO("      End Hover Point");
+            Move_To_Position_Draw(end_hover);
+        }
         /*
         for(int j = 0; i< waypoints.size(); j++)
         {
@@ -144,14 +175,20 @@ void Draw_Line(std::vector<cv::Vec6f> lines)
 void Draw_Colored_Lines(cv::Mat source, cv::Vec3f marker_point)
 {
     ROS_INFO("Executing Draw Line");
-    double scale = 0.0001;
-    double offsetX = 0.5;
-    double offsetY = 0.0;
+    double scale = 0.00032;
+    double offsetX = 0.50;
+    double offsetY = 0.00;
     double heightZ = 0.0;
 
+    display_image_to_screen(source);
     cv::vector<cv::Vec4i> pixels = generate_vector_of_lines(source);
     cv::vector<cv::Vec6f> lines = vectors_2d_to_3d(pixels , scale, offsetX, offsetY, heightZ);
-
+    cout << "Displaying list of lines to be drawn" << endl;
+    for(int i = 0; i < lines.size(); i++)
+    {
+        cout << lines[i][0] << " " << lines[i][1] << " " << lines[i][2] << " " << lines[i][3] << " " << lines[i][4] << " "  << lines[i][5] << endl;
+    }
+    //cout << lines << endl;
     serial->goReady();
 
     Grab_Marker(marker_point);

@@ -117,7 +117,8 @@ int main(int argc, char **argv)
 	red = create_vectorized_image(bgr[2], "RED");
 	final_result = red + blue + green;
 	final_result = Scalar(255, 255, 255) - final_result;
-	//display_image_to_screen(final_result);
+	display_image_to_screen(final_result);
+	int numbers_of_colours = 3;
 	//display_image_to_screen(red);
 
 	//Workspace image to find marker in
@@ -139,7 +140,6 @@ int main(int argc, char **argv)
 	image_transport::Subscriber sub = it.subscribe("/webcam/image_raw", 15, x_imageCallback);
 
 
-
 	ROS_INFO("Looping");
 	while(!got_marker_image)
 	{
@@ -157,6 +157,7 @@ int main(int argc, char **argv)
 
 	while(ros::ok())
 	{
+		
 		got_marker_image = false;
 		while(!got_marker_image)
 		{
@@ -164,29 +165,37 @@ int main(int argc, char **argv)
 			ROS_INFO("*");
 
 		}
+		std::vector<cv::Vec3f> marker_positions;
 
-		flagImageClickReceived = false;
-		cout << "Click the image" << endl;
-		while(flagImageClickReceived == false && ros::ok())
+		for(int j = 0; j < numbers_of_colours; j++)
 		{
-			cout << "*" << endl;
-			cv::imshow("Workspace", image2_unfiltered);
-			//ros::Duration(1.0).sleep();
-			waitKey(100);
+			flagImageClickReceived = false;
+			cout << "Click the image" << endl;
+			while(flagImageClickReceived == false && ros::ok())
+			{
+				cout << "*" << endl;
+				cv::imshow("Workspace", image2_unfiltered);
+				//ros::Duration(1.0).sleep();
+				waitKey(100);
+			}
+			//cv::destroyWindow("Workspace");
+			std::vector<Vec3f> clickedPoints;
+
+			Vec3f clickedPoint(clickX, clickY, 0);
+			clickedPoints.push_back(clickedPoint);
+
+			marker_positions.push_back(  camPoint_to_CRSvector(clickedPoints, 0) );
+			cout << "Markers in the scene (" << marker_positions[j][0] << "," << marker_positions[j][1] << "," << marker_positions[j][2] << ")" << endl;
 		}
-		//cv::destroyWindow("Workspace");
-		std::vector<Vec3f> clickedPoints;
 
-		Vec3f clickedPoint(clickX, clickY, 0);
-		clickedPoints.push_back(clickedPoint);
-
-		cv::Vec3f first_marker;
-		first_marker =  camPoint_to_CRSvector(clickedPoints, 0);
-
-		if (ros::ok())
+		for(int i = 0; i < numbers_of_colours; i++)
 		{
-			Draw_Colored_Lines(red, first_marker);
-		}	
+			if (ros::ok())
+			{
+				Draw_Colored_Lines(bgr[i], marker_positions[i]);
+			}			
+		}
+
 	}
 
 	cv::destroyWindow("Workspace");

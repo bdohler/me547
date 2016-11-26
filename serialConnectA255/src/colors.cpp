@@ -124,7 +124,29 @@ cv::vector<Vec4i> generate_vector_of_lines(cv::Mat image_to_be_vectorized)
 
     vector<Vec4i> lines;
     // Find hough lines 
-    HoughLinesP(edges, lines, 1, CV_PI / 180, 100, 100, 10);
+    HoughLinesP(edges, lines, 1, CV_PI / 180, 20, 20, 10);
+
+    Vec4i temp;
+    temp[0] = 0;
+    temp[1] = 0;
+    temp[2] = 0;
+    temp[3] = image_to_be_vectorized.rows;
+    lines.insert(lines.begin(), temp);
+    temp[0] = 0;
+    temp[1] = image_to_be_vectorized.rows;
+    temp[2] = image_to_be_vectorized.cols;
+    temp[3] = image_to_be_vectorized.rows;
+    lines.insert(lines.begin(), temp);
+    temp[0] = image_to_be_vectorized.cols;
+    temp[1] = image_to_be_vectorized.rows;
+    temp[2] = image_to_be_vectorized.cols;
+    temp[3] = 0;
+    lines.insert(lines.begin(), temp);
+    temp[0] = image_to_be_vectorized.cols;
+    temp[1] = 0;
+    temp[2] = 0;
+    temp[3] = 0;
+    lines.insert(lines.begin(), temp);
 
     return lines;
 }
@@ -146,16 +168,24 @@ cv::vector<Vec6f> vectors_2d_to_3d(cv::vector<Vec4i> two_d_vector, double scale,
     for(size_t i = 0; i < two_d_vector.size(); i++)
     {
         cv::Vec4i line = two_d_vector[i];
-        startX = (line[0]-800/2)*scale+offsetX;
-        startY = (line[1]-600/2)*scale+offsetY;
+        // startX = (line[0]-800/2)*scale+offsetX;
+        // startY = (line[1]-600/2)*scale+offsetY;
+        // startZ = heightZ;
+        // endX = (line[2]-800/2)*scale+offsetX;
+        // endY = (line[3]-600/2)*scale+offsetY;
+        startX = (line[1]-600/2)*scale+offsetX;
+        startY = (line[0]-800/2)*scale+offsetY;
         startZ = heightZ;
-        endX = (line[2]-800/2)*scale+offsetX;
-        endY = (line[3]-600/2)*scale+offsetY;
+        endX = (line[3]-600/2)*scale+offsetX;
+        endY = (line[2]-800/2)*scale+offsetY;
         endZ = heightZ;
         cv::Vec6f newVector(startX, startY, startZ, endX, endY, endZ);
         three_d_vector.push_back(newVector);
     }
-
+    cout << "vectors_2d_to_3d [1]:" << three_d_vector[0][0] << "," << three_d_vector[0][1] << "," << three_d_vector[0][3] << "," << three_d_vector[0][4] << endl;
+    cout << "vectors_2d_to_3d [2]:" << three_d_vector[1][0] << "," << three_d_vector[1][1] << "," << three_d_vector[1][3] << "," << three_d_vector[1][4] << endl;
+    cout << "vectors_2d_to_3d [3]:" << three_d_vector[2][0] << "," << three_d_vector[2][1] << "," << three_d_vector[2][3] << "," << three_d_vector[2][4] << endl;
+    cout << "vectors_2d_to_3d [4]:" << three_d_vector[3][0] << "," << three_d_vector[3][1] << "," << three_d_vector[3][3] << "," << three_d_vector[3][4] << endl;
     return three_d_vector;
 }
 
