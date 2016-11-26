@@ -43,7 +43,7 @@ cv::Mat fetch_image(std::string file_name)
         printf("Image not loaded properly\n");
     }
 
-    resize(image, image, Size(800, 600));
+    resize(image, image, Size(600, 600));
 
     return image;
 }
@@ -174,10 +174,10 @@ cv::vector<Vec6f> vectors_2d_to_3d(cv::vector<Vec4i> two_d_vector, double scale,
         // endX = (line[2]-800/2)*scale+offsetX;
         // endY = (line[3]-600/2)*scale+offsetY;
         startX = (line[1]-600/2)*scale+offsetX;
-        startY = (line[0]-800/2)*scale+offsetY;
+        startY = (line[0]-600/2)*scale+offsetY;
         startZ = heightZ;
         endX = (line[3]-600/2)*scale+offsetX;
-        endY = (line[2]-800/2)*scale+offsetY;
+        endY = (line[2]-600/2)*scale+offsetY;
         endZ = heightZ;
         cv::Vec6f newVector(startX, startY, startZ, endX, endY, endZ);
         three_d_vector.push_back(newVector);
@@ -360,7 +360,7 @@ cv::Vec3f camPoint_to_CRSvector(std::vector<Vec3f> markers, int marker_number)
     float x, y, z;
     x = -v+0.525;
     y = -u+0.090;
-    z = 0.13;//0.994 3-w-f;//-w+w+f;
+    z = 0.11;//0.994 3-w-f;//-w+w+f;
 
     ROS_INFO("X and Y displacement from camera click (x,y)[m]: %f, %f", x, y);
 

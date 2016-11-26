@@ -9,7 +9,8 @@
 void Draw_Colored_Lines(cv::Mat source, cv::Vec3f marker_point);
 
 void Move_To_Position(Vec3f pos);
-void Grab_Marker(cv::Vec3f marker_point);
+Vec3f Grab_Marker(cv::Vec3f marker_point);
 void Place_Marker(cv::Vec3f marker_point);
 void Draw_Line(std::vector<cv::Vec6f> lines);
+Vec3f JoystickControl(cv::Vec3f base);
 #endif

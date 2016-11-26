@@ -62,7 +62,7 @@ void Move_To_Position_Draw(Vec3f pos)
 
     if(temp == 0)
     {
-        serial->sleepms(1500);
+        serial->sleepms(1000);
         ROS_INFO("Successful position request");
     }
     else if(temp == -1)
@@ -76,7 +76,7 @@ void Move_To_Position_Draw(Vec3f pos)
 }
 
 
-void Grab_Marker(cv::Vec3f marker_point)
+Vec3f Grab_Marker(cv::Vec3f marker_point)
 {
     ROS_INFO("Grabbing Marker");
     serial->grip_open ();
@@ -84,10 +84,76 @@ void Grab_Marker(cv::Vec3f marker_point)
     marker_hover_point[2] = (float)marker_hover_point[2] + 0.1;
 
     Move_To_Position(marker_hover_point);
-    Move_To_Position(marker_point);
+
+    Vec3f correction = JoystickControl(marker_hover_point);
+
+    Move_To_Position(marker_point + correction);
     serial->grip_close();
-    Move_To_Position(marker_hover_point);
+
+    marker_hover_point[2] += 0.05;
+    Move_To_Position(marker_hover_point + correction);
     //sleepms(1000);
+
+    return correction;
+}
+
+Vec3f JoystickControl(cv::Vec3f base)
+{
+    cout << "ADJUSTING POSITTION; USE WASD, Q TO EXIT" << endl;
+    char input = 'x';
+
+    cv::Vec3f diff(0, 0, 0);
+
+    const float delta = 0.003;
+
+    do
+    {
+        cout << "Enter new input" << endl;
+        cin >> input;
+
+        switch(input)
+        {
+            case 'w':
+                diff[1] += delta;
+                break;
+            case 's':
+                diff[1] -= delta;
+                break;
+            case 'd':
+                diff[0] += delta;
+                break;
+            case 'a':
+                diff[0] -= delta;
+                break;
+
+            case 'i':
+                diff[1] += 3*delta;
+                break;
+            case 'k':
+                diff[1] -= 3*delta;
+                break;
+            case 'l':
+                diff[0] += 3*delta;
+                break;
+            case 'j':
+                diff[0] -= 3*delta;
+                break;
+
+            case 'q':
+                break;
+            default:
+                break;
+        }
+
+
+        if (input != 'q')
+        {
+            Move_To_Position_Draw(base + diff);
+        }
+
+    }while (input != 'q');
+
+    return diff;
 }
 
 void Place_Marker(cv::Vec3f marker_point)
@@ -109,7 +175,7 @@ void Draw_Line(std::vector<cv::Vec6f> lines)
     ROS_INFO("Drawing Lines");
     double scale = 0.001;
     double draw_Z = 0.05;
-    double hover_Z = 0.10;
+    double hover_Z = 0.1;
 
     double ik_angles[5] = {};
 
@@ -123,6 +189,7 @@ void Draw_Line(std::vector<cv::Vec6f> lines)
     // Iterate through points to go to
     for(int i = 0; i < lines.size(); i++)
     {
+        ROS_INFO("Drawing line %d of %d", i, (int)lines.size());
 
         //ROS_INFO("Drawing line number: %i", i+1);
         cv::Vec6f point = lines.at(i);
@@ -176,7 +243,7 @@ void Draw_Colored_Lines(cv::Mat source, cv::Vec3f marker_point)
 {
     ROS_INFO("Executing Draw Line");
     double scale = 0.00032;
-    double offsetX = 0.50;
+    double offsetX = 0.55;
     double offsetY = 0.00;
     double heightZ = 0.0;
 
@@ -191,9 +258,13 @@ void Draw_Colored_Lines(cv::Mat source, cv::Vec3f marker_point)
     //cout << lines << endl;
     serial->goReady();
 
-    Grab_Marker(marker_point);
+    serial->setSpeed(20);
+
+    Vec3f correction = Grab_Marker(marker_point);
     Draw_Line(lines);
-    Place_Marker(marker_point);
+    Place_Marker(marker_point + correction);
+
+    serial->setSpeed(10);
 
     serial->goReady();
 }

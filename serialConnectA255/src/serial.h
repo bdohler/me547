@@ -128,6 +128,8 @@ public:
         
     int grip_close();
 
+    int setSpeed(int speed);
+
     double* forwKine(double desTh_1, double desTh_2, double desTh_3, double desTh_4, double desTh_5);
 
     double* invKine(double desX, double desY, double desZ, double alpha);

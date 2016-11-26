@@ -99,30 +99,23 @@ int main(int argc, char **argv)
 	Mat green;
 	Mat red;	
 	Mat final_result;
-	int blur_strength = 9;
-	std::string image_to_draw_file_name = "/home/me-547/Desktop/8.png";
-	std::string workplace_image_test = "/home/me547/Desktop/8.png";
+	int blur_strength = 15;
+	std::string image_to_draw_file_name = "/home/me-547/Desktop/dino1.png";
+	std::string workplace_image_test = "/home/me547/Desktop/dino1.png";
 
 
-
+	//Artistic block
 	image = fetch_image(image_to_draw_file_name);
-	//display_image_to_screen(image);
 	blurred_image = blur_image(image, blur_strength);
-	//display_image_to_screen(blurred_image);
-
 	bgr = seperate_channels(blurred_image);
-
 	blue = create_vectorized_image(bgr[0], "BLUE");
 	green = create_vectorized_image(bgr[1], "GREEN");
 	red = create_vectorized_image(bgr[2], "RED");
 	final_result = red + blue + green;
-	final_result = Scalar(255, 255, 255) - final_result;
+	//final_result = Scalar(255, 255, 255) - final_result;
 	display_image_to_screen(final_result);
+	save_image(final_result, "final_result");
 	int numbers_of_colours = 3;
-	//display_image_to_screen(red);
-
-	//Workspace image to find marker in
-	//Currently a test image. 
 	
 	std::vector<Mat> bgr2;
 	cv::Mat blue2;
@@ -130,12 +123,8 @@ int main(int argc, char **argv)
 	cv::Mat red2;
 	cv::Mat image2_unfiltered;
 
-	
-
-
+	//Camera handling
 	ros::NodeHandle n_ = ros::NodeHandle("Serial");
-	//cv::namedWindow("overhead_view");
-	//cv::startWindowThread();
 	image_transport::ImageTransport it(n_);
 	image_transport::Subscriber sub = it.subscribe("/webcam/image_raw", 15, x_imageCallback);
 
@@ -167,7 +156,7 @@ int main(int argc, char **argv)
 		}
 		std::vector<cv::Vec3f> marker_positions;
 
-		for(int j = 0; j < numbers_of_colours; j++)
+		for(int j = 2; j < numbers_of_colours; j++)
 		{
 			flagImageClickReceived = false;
 			cout << "Click the image" << endl;
@@ -185,10 +174,12 @@ int main(int argc, char **argv)
 			clickedPoints.push_back(clickedPoint);
 
 			marker_positions.push_back(  camPoint_to_CRSvector(clickedPoints, 0) );
+			marker_positions.push_back(  camPoint_to_CRSvector(clickedPoints, 0) );
+			marker_positions.push_back(  camPoint_to_CRSvector(clickedPoints, 0) );
 			cout << "Markers in the scene (" << marker_positions[j][0] << "," << marker_positions[j][1] << "," << marker_positions[j][2] << ")" << endl;
 		}
 
-		for(int i = 0; i < numbers_of_colours; i++)
+		for(int i = 2; i < numbers_of_colours; i++)
 		{
 			if (ros::ok())
 			{

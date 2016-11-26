@@ -592,6 +592,19 @@ int serialConnectA255::moveTheta(double desSpeed, double finalTheta_1, double fi
     getAngles();
 }
 
+int serialConnectA255::setSpeed(int speed)
+{
+    // Code from group ?
+    string cmd = "";
+    cmd = "speed " + boost::lexical_cast<std::string>(speed) + "\r";
+    int status = writeString(cmd);
+    if (status != 0)
+    {
+        ROS_ERROR("Couldn't write speed");
+        return -1;
+    }
+}
+
 int serialConnectA255::moveRobot(double x, double y, double z, double z_rot, double y_rot, double x_rot)
 {
     // Get Current Arm Position
@@ -643,7 +656,7 @@ int serialConnectA255::moveRobot(double x, double y, double z, double z_rot, dou
     }
 
     //Assuming speed of 10, need this delay. If you change your speed, you can change this delay but be very careful
-    sleepms(1000);
+    sleepms(500);
 
     return 0;
 }
@@ -766,7 +779,7 @@ int serialConnectA255::grip_open()
         ROS_ERROR("Unable to send 'grip_open'");
         return -1;
     }
-    sleepms(2000);
+    sleepms(1000);
 }
 
 int serialConnectA255::grip_close()
@@ -778,7 +791,7 @@ int serialConnectA255::grip_close()
         ROS_ERROR("Unable to send 'grip_close'");
         return -1;
     }
-    sleepms(2000);
+    sleepms(1000);
 }
 
 void open_and_initialize_arm_controller(serialConnectA255 armController)
